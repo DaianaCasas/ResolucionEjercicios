@@ -17,10 +17,12 @@
  * 
  * 
 */
-
+#include <sys/types.h>
 #include "string.h"
 #include <stdio.h>
 #include <ctype.h>
+#include <stdbool.h>
+
 #define MAX 100
 
 
@@ -44,18 +46,19 @@ int main(void){
     while( ( vValue=getchar() ) != '0' ) {
         if( isdigit(vValue) ) {
             if (vValue == '0'){
-                vValue='\n';
+                vValue='\0';
                 break;
             }
             else{
                 vPtrValues[vNum] = vValue; // vNum = 9
                 vNum++;// incremento a vNum=10
-                if ( ! (vNum%10) & (vNum!=0) ){ // Si es el vNum=10 y vNum!= 0
+                if ( ! (vNum%10) && (vNum!=0) ){ // Si es el vNum=10 y vNum!= 0
                     vPtrValues[vNum] = '\n'; // inserto nueva linea en vNum = 10
                     vNum++; // incremento a 11
                 }
             }
         }
+                
     }
     if ((vNum%10)){ // Si hay mas caracteres en la linea: debo completar
         vAuxNumMax = ((vNum/10) + 1 )*10; // Hasta el final de linea
@@ -67,7 +70,7 @@ int main(void){
     vPtrValues[vAuxNumMax+1]='\0'; // Agrego el fin
     printf("Ingrese el nombre del archivo a guardar:\n");
     scanf("%s",vTitleFile);
-    snprintf(vNameFile, sizeof(vNameFile), "C:\\Users\\daian\\Desktop\\Eldar_Challange\\Solution\\ejercicio1\\%s.txt", vTitleFile);//Cambiar PATH
+    snprintf(vNameFile, sizeof(vNameFile), "C:\\Users\\daian\\Desktop\\Eldar_Challange\\ResolucionEjercicios\\Ejercicio1\\%s.txt", vTitleFile);//Cambiar PATH
 
     vPtrFile = fopen(vNameFile,  "w+" );
     if(vPtrFile == NULL){
