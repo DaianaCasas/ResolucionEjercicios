@@ -65,12 +65,16 @@ int main(void){
     char numCard[MAX];
     char codeSeg[MAX_CSEG];
 
+    char sendMsg[MAX];
+    char vLenCardNum[3];
+    int vLenCardNumint=0;
+    char vMonto[13];
     printf("\nTransaccion iniciada\nInsertar monto: $");
-    scanf("%f",&monto);
+    scanf("%lf",&monto);
     printf("\nNumero de Tarjeta (minimo 13 digitos): #");
     scanf("%s",newNumCard);
 
-    printf("\nInsertado: %f\n",monto);
+    printf("\nInsertado: %lf\n",monto);
     printf("\nInsertado: %s\n",newNumCard);
     if(strlen(newNumCard)>13 ){
         strcpy(numCard,newNumCard);
@@ -81,20 +85,35 @@ int main(void){
         return 0;
     }
     if (stepValidation){
-        resCardVerification = numCardVerification(numCard);
+        //resCardVerification = numCardVerification(numCard);
+        resCardVerification = 1;
         stepCode = resCardVerification;
     }
 
     if (stepCode){
         printf("\nInsertar codigo de Tarjeta ( 3 digitos): #");
         scanf("%s",codeSeg);
+        // Armado de Request Message
+        vLenCardNumint = strlen(newNumCard);
+        sprintf(vLenCardNum,"%d",vLenCardNumint);
 
+        memcpy(sendMsg, "0200", 4);
+        memcpy(sendMsg+5, vLenCardNum,2);
+        memcpy(sendMsg+5+2,numCard,vLenCardNumint);
+        sprintf(vMonto,"%s","123456789101112");
+        memcpy(sendMsg+5+2+vLenCardNumint,vMonto,12);
+        memcpy(sendMsg+5+2+vLenCardNumint+12,codeSeg,3);
+        memcpy(sendMsg+5+2+vLenCardNumint+12+1,"\0",1);
+        
+        printf("\nRequest Message: %s\n",sendMsg);
         /* Request Message: ASCII
         | Tipo de mensaje | Num de tarjeta | Monto | Codigo de seguridad |
         Tipo de mensaje: 0200
         Num de tarjeta: XX (len num Card) + numCard
         Monto: 12 caracteres. Sin , y ceros a la izq
         */
+       
+       
        /* Response Message: ASCII
        | Tipo de mensaje | Codigo Respuesta |
        Tipo de mensaje: 0210
@@ -149,7 +168,7 @@ bool numCardVerification(const char* numCard){
                 }
             }
             else {
-                printf("\n! Hubo un error en la lectura . Archivo: %s ! \n", PATH_RANGE);
+                printf("\n! Hubo un error en la lectura \n");
             }
         } 
         fclose(vPtrRange);
