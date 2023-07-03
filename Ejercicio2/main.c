@@ -83,7 +83,7 @@ int main(void){
     time_t ticks;
 
     struct sockaddr_in server_addr; 
-
+    bool sconStep=0;
     printf("\nTransaccion iniciada\nInsertar monto: $");
     scanf("%lf",&monto);
     printf("\nNumero de Tarjeta (minimo 13 digitos): #");
@@ -140,40 +140,38 @@ int main(void){
         server_addr.sin_family = AF_INET;
         server_addr.sin_port = htons(5000); 
 
-        if(inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr)<=0)
-        {
+        if(inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr)<=0){
             printf("\n inet_pton error occured\n");
-            return 1;
         } 
-
-        if( connect(sockFd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-        {
-        printf("\n Error : Connect Failed \n");
-        return 1;
-        } 
-        snprintf(ssendMsg,sizeof(sendMsg), "%s\r\n",sendMsg);
-        write(sockFd, ssendMsg, strlen(ssendMsg)); 
-        sleep(5); // 5 segundos
-        while ( (n = read(sockFd, srecMsg, sizeof(srecMsg)-1)) > 0)
-        {
-            srecMsg[n] = 0;
-            if(fputs(srecMsg, stdout) == EOF)
-            {
-                printf("\n Error : Fputs error\n");
+        else{
+            sconStep=1;
+            if( connect(sockFd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0){
+                printf("\n ERROR DE COMUNICACION \n");
+                sconStep=0;
             }
         }
-
-        if(n < 0)
-        {
-            printf("\n Sin respuesta \n");
-        }
-        
+        if(sconStep){
+            snprintf(ssendMsg,sizeof(sendMsg), "%s\r\n",sendMsg);
+            write(sockFd, ssendMsg, strlen(ssendMsg))
+            sleep(5); // 5 segundos
+            while ( (n = read(sockFd, srecMsg, sizeof(srecMsg)-1)) > 0)
+            {
+                srecMsg[n] = 0;
+                if(fputs(srecMsg, stdout) == EOF)
+                {
+                    printf("\n Error : Fputs error\n");
+                }
+            }
+            if(n < 0)
+            {
+                printf("\n ERROR DE COMUNICACION \n");
+            }
+        }    
        /* Response Message: ASCII
        | Tipo de mensaje | Codigo Respuesta |
        Tipo de mensaje: 0210
        Codigo de respuesta: 2 digitos 
        */
-
     }
 
     printf("Transaccion finalizada.\n");
