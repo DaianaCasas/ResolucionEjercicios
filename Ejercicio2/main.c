@@ -21,11 +21,16 @@
 *     * otro: transaccion rechazada, mostrar "RECHAZADA" en pantalla
 */
 
-
+#include <linux/socket.h>
 #include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <errno.h>
+#include <arpa/inet.h> 
 #include <stdio.h>
 #include <string.h>
-#include<stdlib.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 #define MAX 100
@@ -65,10 +70,20 @@ int main(void){
     char numCard[MAX];
     char codeSeg[MAX_CSEG];
 
+    // Request Msg
     char sendMsg[MAX];
     char vLenCardNum[3];
     int vLenCardNumint=0;
     char vMonto[13];
+
+    // Cliente
+    int sockFd = 0, n = 0;
+    char srecMsg[1024];
+    char ssendMsg[1025];
+    time_t ticks;
+
+    struct sockaddr_in server_addr; 
+
     printf("\nTransaccion iniciada\nInsertar monto: $");
     scanf("%lf",&monto);
     printf("\nNumero de Tarjeta (minimo 13 digitos): #");
@@ -112,8 +127,47 @@ int main(void){
         Num de tarjeta: XX (len num Card) + numCard
         Monto: 12 caracteres. Sin , y ceros a la izq
         */
-       
-       
+        memset(ssendMsg, ssendMsg, sizeof(ssendMsg));
+        memset(srecMsg, '0',sizeof(srecMsg));
+        if((sockFd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        {
+            printf("\n Error : Could not create socket \n");
+            return 1;
+        } 
+
+        memset(&server_addr, '0', sizeof(server_addr)); 
+
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_port = htons(5000); 
+
+        if(inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr)<=0)
+        {
+            printf("\n inet_pton error occured\n");
+            return 1;
+        } 
+
+        if( connect(sockFd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+        {
+        printf("\n Error : Connect Failed \n");
+        return 1;
+        } 
+        snprintf(ssendMsg,sizeof(sendMsg), "%s\r\n",sendMsg);
+        write(sockFd, ssendMsg, strlen(ssendMsg)); 
+        sleep(5); // 5 segundos
+        while ( (n = read(sockFd, srecMsg, sizeof(srecMsg)-1)) > 0)
+        {
+            srecMsg[n] = 0;
+            if(fputs(srecMsg, stdout) == EOF)
+            {
+                printf("\n Error : Fputs error\n");
+            }
+        }
+
+        if(n < 0)
+        {
+            printf("\n Sin respuesta \n");
+        }
+        
        /* Response Message: ASCII
        | Tipo de mensaje | Codigo Respuesta |
        Tipo de mensaje: 0210
