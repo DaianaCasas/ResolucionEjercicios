@@ -16,7 +16,7 @@ int main(int argc, char * argv[]){
 
   struct sockaddr_in server_addr;
   char sendMsg[1025];
-
+  char srecMsg[1025];
   time_t ticks;
 
   listendFd = socket(AF_INET, SOCK_STREAM,0);
@@ -39,8 +39,15 @@ int main(int argc, char * argv[]){
   while(1){
     connFd = accept(listendFd, (struct sockaddr*)NULL, NULL); 
     ticks = time(NULL);
-    snprintf(sendMsg,sizeof(sendMsg), "%s\r\n","021000");
-    write(connFd, sendMsg, strlen(sendMsg)); 
+    if ((n = read(listendFd, srecMsg, sizeof(srecMsg)-1)) > 0){
+      srecMsg[n] = 0;
+      if(fputs(srecMsg, stdout) == EOF)
+      {
+          printf("\n Error : Fputs error\n");
+      }
+      snprintf(sendMsg,sizeof(sendMsg), "%s\r\n","021000");
+      write(connFd, sendMsg, strlen(sendMsg)); 
+    }
     close(connFd);
     sleep(1);
   }
