@@ -31,21 +31,21 @@
 #define MAX 100
 #define MAX_CSEG 4 
 
-#define PATH_RANGE "C:\\Users\\daian\\Desktop\\Eldar_Challange\\Solution\\ejercicio2\\range.dat"
-#define PATH_CARDS "C:\\Users\\daian\\Desktop\\Eldar_Challange\\Solution\\ejercicio2\\cards.dat"
+#define PATH_RANGE "C:\\Users\\daian\\Desktop\\Eldar_Challange\\ResolucionEjercicios\\Ejercicio2\\range.dat"
+#define PATH_CARDS "C:\\Users\\daian\\Desktop\\Eldar_Challange\\ResolucionEjercicios\\Ejercicio2\\cards.dat"
 
-typedef struct { 
+typedef struct Range { 
     char rangeLow[8 + 1];
     char rangeHigh[8 + 1];
     unsigned char len;
     int id;
 } range_t;
-typedef struct {
+typedef struct Card{
     char label[12 + 1]; 
     int id;
 } card_t;
 
-typedef struct{
+typedef struct Data{
     double monto;
     char numCard[MAX];
     char codeSeg[MAX_CSEG];
@@ -55,35 +55,39 @@ typedef struct{
 bool numCardVerification(const char*);
 
 int main(void){
-    data_t newTrans = {0.0,"",""};
-    char* newNumCard;
-    
+   
     bool resCardVerification=0;
-    
+    char newNumCard[MAX];    
     bool stepValidation=0;
     bool stepCode=0;
 
+    double monto=0.0;
+    char numCard[MAX];
+    char codeSeg[MAX_CSEG];
+
     printf("\nTransaccion iniciada\nInsertar monto: $");
-    scanf("%.2f",&newTrans.monto);
-    printf("\nInsertar numero de Tarjeta (minimo 13 digitos): #");
+    scanf("%f",&monto);
+    printf("\nNumero de Tarjeta (minimo 13 digitos): #");
     scanf("%s",newNumCard);
+
+    printf("\nInsertado: %f\n",monto);
+    printf("\nInsertado: %s\n",newNumCard);
     if(strlen(newNumCard)>13 ){
-        strcpy(newTrans.numCard,newNumCard);
+        strcpy(numCard,newNumCard);
         stepValidation = 1;
     }
     else{
         printf("Numero de Tarjeta invalido.\n");
         return 0;
     }
-
     if (stepValidation){
-        resCardVerification = numCardVerification(newTrans.numCard);
+        resCardVerification = numCardVerification(numCard);
         stepCode = resCardVerification;
     }
 
     if (stepCode){
         printf("\nInsertar codigo de Tarjeta ( 3 digitos): #");
-        scanf("%s",newTrans.codeSeg);
+        scanf("%s",codeSeg);
 
         /* Request Message: ASCII
         | Tipo de mensaje | Num de tarjeta | Monto | Codigo de seguridad |
@@ -106,6 +110,7 @@ int main(void){
 
 bool numCardVerification(const char* numCard){
     bool res=0;
+    char digNumCard[9];
     int resReadFile=0;    
     int intNumCard=0;
 
@@ -114,26 +119,29 @@ bool numCardVerification(const char* numCard){
     int rangeLow=0;
     int rangeHigh=0;
     int id=0;
+    int len=0;
 
     FILE* vPtrCard;
     card_t resReadCard;
-
     // Verifico numCard
-    vPtrRange = fopen(PATH_RANGE, "r");
+    vPtrRange = fopen(PATH_RANGE, "rb+");
     if(vPtrRange == NULL){
         printf("! No pudo leerse el archivo %s ! \n",PATH_RANGE);
     }
     else{
-        resReadFile = fread(&resReadRange,sizeof(range_t),1,vPtrRange); // Lectura de 1 dato (estructura range_t)
         while( ! feof(vPtrRange)){
+            resReadFile = fread(&resReadRange,sizeof(range_t),1,vPtrRange); // Lectura de 1 dato (estructura range_t)
             if (resReadFile>0){
-                printf("Lectura de Rango completo. Archivo: %s\n",PATH_RANGE);
-                //resReadRange.len; // int
-                rangeHigh = atoi(resReadRange.rangeHigh); // char*
-                rangeLow = atoi(resReadRange.rangeLow); // char*
-                id = atoi( resReadRange.id ); // char*
-                intNumCard = atoi(numCard);
-                if ( (strlen(numCard) == resReadRange.len) & ( rangeHigh > intNumCard) & ( intNumCard > rangeLow) ){
+                len = (int)resReadRange.len;
+                rangeHigh = atoi(resReadRange.rangeHigh); // char[]
+                rangeLow = atoi(resReadRange.rangeLow); // char[]
+                id = resReadRange.id; // int
+
+                strncpy(digNumCard,numCard,8);
+                digNumCard[9]='\0';
+                intNumCard= atoi(digNumCard);
+    
+                if ( (strlen(numCard) == len) && ( rangeHigh > intNumCard) && ( intNumCard > rangeLow) ){
                     printf(" - TARJETA RANGOS VALIDOS -");
                     res = 1;
                     resReadFile=0;
@@ -149,19 +157,16 @@ bool numCardVerification(const char* numCard){
 
     // Verifico ID
     if (res){
-        vPtrCard = fopen(PATH_CARDS, "r");
+        vPtrCard = fopen(PATH_CARDS, "rb+");
         if(vPtrCard == NULL){
             printf("! No pudo leerse el archivo %s ! \n",PATH_CARDS);
         }
         else{
-            resReadFile = fread(&resReadCard,sizeof(card_t),1,vPtrCard); // Lectura de 1 dato (estructura range_t)
             while( ! feof(vPtrCard)){
+                resReadFile = fread(&resReadCard,sizeof(card_t),1,vPtrCard); // Lectura de 1 dato (estructura range_t)
                 if (resReadFile>0){
                     printf("Lectura de Card completo. Archivo: %s\n",PATH_CARDS);
-                    //resReadCard.id; // int
-                    //resReadCard.label; //char*
                     if ( resReadCard.id == id  ){
-                        printf(" - TARJETA ID VALIDA -\n");
                         printf(" - Tarjeta Label: %s\n",resReadCard.label );
                         res = 1;
                         resReadFile=0;
