@@ -75,22 +75,31 @@ int main(void){
     char vLenCardNum[3];
     int vLenCardNumint=0;
     char vMonto[13];
-
+    char vMontoDouble[13];
+    int vLenMontoDouble=0;
+    char vMontoInt[11];
+    int vLenMontoInt=0;
+    int cIdxMontoInt=0;
+    int vIdxMontoDouble=0;
     // Cliente
     int sockFd = 0, n = 0;
     char srecMsg[1024];
     char ssendMsg[1025];
-    time_t ticks;
 
     struct sockaddr_in server_addr; 
-    bool sconStep=0;
+    // Response Msg
+    char recMsg[7];
+    int vLenrecMsg=0;
+    char vrecTypeMsg[5];
+    char vrecCode[3];
+    int vrecCodeint=0;
     printf("\nTransaccion iniciada\nInsertar monto: $");
     scanf("%lf",&monto);
     printf("\nNumero de Tarjeta (minimo 13 digitos): #");
     scanf("%s",newNumCard);
 
-    printf("\nInsertado: %lf\n",monto);
-    printf("\nInsertado: %s\n",newNumCard);
+    printf("\nMonto insertado: %.2lf\t",monto);
+    printf("Numero de Tarjeta insertado: %s\n",newNumCard);
     if(strlen(newNumCard)>13 ){
         strcpy(numCard,newNumCard);
         stepValidation = 1;
@@ -100,7 +109,7 @@ int main(void){
         return 0;
     }
     if (stepValidation){
-        //resCardVerification = numCardVerification(numCard);
+        resCardVerification = numCardVerification(numCard);
         resCardVerification = 1;
         stepCode = resCardVerification;
     }
@@ -109,29 +118,46 @@ int main(void){
         printf("\nInsertar codigo de Tarjeta ( 3 digitos): #");
         scanf("%s",codeSeg);
         // Armado de Request Message
+        printf("\nArmando Request Message\n");
+        // monto: vMonto char 12 + 1 - monto double XXXX.YY
+        sprintf(vMontoDouble,"%.2lf",monto);
+        vLenMontoDouble = strlen(vMontoDouble); // XXXX.YY
+        sprintf(vMontoInt,"%d",(int)monto);
+        vLenMontoInt = strlen(vMontoInt); // XXXX
+        for (int i = 0; i < (10 - vLenMontoInt); i++){
+            vMonto[i] = '0';
+        }
+        for(int j=(10 - vLenMontoInt); j< 11; j++){
+            vMonto[j] = vMontoInt[cIdxMontoInt];
+            cIdxMontoInt++;
+        }
+        vIdxMontoDouble = vLenMontoDouble-2;
+        vMonto[10] = vMontoDouble[vIdxMontoDouble];
+        vIdxMontoDouble = vLenMontoDouble-1;
+        vMonto[11] = vMontoDouble[vIdxMontoDouble];
+        vMonto[12] = '\0';
+        printf("\n\tMonto para el Request Message %s\n",vMonto);
         vLenCardNumint = strlen(newNumCard);
         sprintf(vLenCardNum,"%d",vLenCardNumint);
-
         memcpy(sendMsg, "0200", 4);
         memcpy(sendMsg+5, vLenCardNum,2);
         memcpy(sendMsg+5+2,numCard,vLenCardNumint);
-        sprintf(vMonto,"%s","123456789101112");
         memcpy(sendMsg+5+2+vLenCardNumint,vMonto,12);
         memcpy(sendMsg+5+2+vLenCardNumint+12,codeSeg,3);
         memcpy(sendMsg+5+2+vLenCardNumint+12+1,"\0",1);
         
-        printf("\nRequest Message: %s\n",sendMsg);
+        printf("\n\tRequest Message: %s\n",sendMsg);
         /* Request Message: ASCII
         | Tipo de mensaje | Num de tarjeta | Monto | Codigo de seguridad |
         Tipo de mensaje: 0200
         Num de tarjeta: XX (len num Card) + numCard
         Monto: 12 caracteres. Sin , y ceros a la izq
         */
-        memset(ssendMsg, ssendMsg, sizeof(ssendMsg));
+        memset(ssendMsg, '0', sizeof(ssendMsg));
         memset(srecMsg, '0',sizeof(srecMsg));
         if((sockFd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         {
-            printf("\n Error : Could not create socket \n");
+            printf("\n ERROR DE COMUNICACION : CodeError01 \n");
             return 1;
         } 
 
@@ -140,41 +166,53 @@ int main(void){
         server_addr.sin_family = AF_INET;
         server_addr.sin_port = htons(5000); 
 
-        if(inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr)<=0){
-            printf("\n inet_pton error occured\n");
+        if(inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr)<=0)
+        {
+            printf("\n ERROR DE COMUNICACION : CodeError02 \n");
+            return 1;
         } 
-        else{
-            sconStep=1;
-            if( connect(sockFd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0){
-                printf("\n ERROR DE COMUNICACION \n");
-                sconStep=0;
-            }
-        }
-        if(sconStep){
-            snprintf(ssendMsg,sizeof(sendMsg), "%s\r\n",sendMsg);
-            write(sockFd, ssendMsg, strlen(ssendMsg))
-            sleep(5); // 5 segundos
-            while ( (n = read(sockFd, srecMsg, sizeof(srecMsg)-1)) > 0)
-            {
-                srecMsg[n] = 0;
-                if(fputs(srecMsg, stdout) == EOF)
-                {
-                    printf("\n Error : Fputs error\n");
-                }
-            }
-            if(n < 0)
-            {
-                printf("\n ERROR DE COMUNICACION \n");
-            }
-        }    
+
+        if( connect(sockFd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+        {
+        printf("\n ERROR DE COMUNICACION : CodeError03 \n");
+        return 1;
+        } 
+        snprintf(ssendMsg,sizeof(sendMsg), "%s\r\n",sendMsg);
+        write(sockFd, ssendMsg, strlen(ssendMsg)); 
+       // sleep(5);
        /* Response Message: ASCII
        | Tipo de mensaje | Codigo Respuesta |
        Tipo de mensaje: 0210
        Codigo de respuesta: 2 digitos 
        */
+        while ( (n = read(sockFd, srecMsg, sizeof(srecMsg)-1)) > 0){
+            srecMsg[n] = 0;
+        }
+        if(strlen(srecMsg) <= 0){
+            printf("\n\tERROR DE COMUNICACION : CodeError04 \n");
+        }
+        else
+        {
+            printf("\nResponse Message: %s", srecMsg);
+            vLenrecMsg = strlen(srecMsg);
+            memcpy(vrecTypeMsg,srecMsg,4);
+            vrecTypeMsg[4] ='\0';
+            memcpy(vrecCode,srecMsg+5,2);
+            vrecCode[2]='\0';
+            vrecCodeint=atoi(vrecCode);
+            printf("\nTipo de mensaje: %s \nCodigo de respuesta: %d\n", vrecTypeMsg,vrecCodeint);
+        }
+        if (!vrecCodeint){
+            printf("\n\tTRANSACCION APROBADA\n");
+        }
+        else{
+            printf("\n\tTRANSACCION RECHAZADA\n");
+        }
     }
-
-    printf("Transaccion finalizada.\n");
+    else{
+        printf("\n TARJETA NO SOPORTADA \n");
+    }
+    printf("\nTransaccion finalizada.\n");
     return 0;
 }
 
